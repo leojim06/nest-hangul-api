@@ -12,7 +12,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new Error(
         'JWT_SECRET no está definido en las variables de entorno',
       );
-    console.log('Secret: ', jwtSecret);
 
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),

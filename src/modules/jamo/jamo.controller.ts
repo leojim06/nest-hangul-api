@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -9,6 +8,7 @@ import {
   Post,
   Put,
   UseGuards,
+  UsePipes,
 } from '@nestjs/common';
 import { JamoService } from './jamo.service';
 import {
@@ -16,10 +16,12 @@ import {
   updateJamoValidation,
 } from './jamo.validation.dto';
 import { JamoResponseDto } from './jamo.response.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
-import { Roles } from '../auth/roles.decorator';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../users/user.schema';
+import { ZodValidationPipe } from 'src/common/validations/zod-validation.pipe';
+import { Jamo } from './jamo.schema';
+import { RolesGuard } from 'src/common/guards/roles.guard';
 
 @Controller('jamos')
 export class JamoController {
@@ -29,13 +31,9 @@ export class JamoController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @HttpCode(201)
-  async create(@Body() data: unknown): Promise<{ id: string }> {
-    const validateData = createJamoValidation.safeParse(data);
-    if (!validateData.success) {
-      throw new BadRequestException(validateData.error.format());
-    }
-
-    return this.jamoService.create(validateData.data);
+  @UsePipes(new ZodValidationPipe(createJamoValidation))
+  async create(@Body() data: Partial<Jamo>): Promise<{ id: string }> {
+    return this.jamoService.create(data);
   }
 
   @Get()
@@ -52,12 +50,12 @@ export class JamoController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.VISITOR)
   @HttpCode(204)
-  async update(@Param('id') id: string, @Body() data: unknown): Promise<void> {
-    const validatedData = updateJamoValidation.safeParse(data);
-    if (!validatedData.success) {
-      throw new BadRequestException(validatedData.error.format());
-    }
-    await this.jamoService.update(id, validatedData.data);
+  @UsePipes(new ZodValidationPipe(updateJamoValidation))
+  async update(
+    @Param('id') id: string,
+    @Body() data: Partial<Jamo>,
+  ): Promise<void> {
+    await this.jamoService.update(id, data);
   }
 
   @Delete(':id')

@@ -13,7 +13,7 @@ export class UsersService {
   }
 
   async create(user: Partial<User>): Promise<User> {
-    const salt = await bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(12);
     user.password = await bcrypt.hash(user.password!, salt);
     const newUser = new this.userModel(user);
     return newUser.save();

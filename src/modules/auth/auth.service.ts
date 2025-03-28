@@ -1,8 +1,9 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
-import * as bcrypt from 'bcrypt';
 import { UserType } from './auth.interface';
+import { logger } from 'src/config/logger';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
@@ -17,9 +18,10 @@ export class AuthService {
     if (user && (await bcrypt.compare(pass, user.password))) {
       // if (user && pass === user.password) {
       const { password, ...result } = user;
-      console.log(user);
       return result;
     }
+
+    logger.warn(`Intento fallido de inicio de sesión para: ${username}`);
     throw new UnauthorizedException('Credenciales incorrectas');
   }
 
