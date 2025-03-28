@@ -8,6 +8,7 @@ import {
   Param,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
 import { JamoService } from './jamo.service';
 import {
@@ -15,11 +16,13 @@ import {
   updateJamoValidation,
 } from './jamo.validation.dto';
 import { JamoResponseDto } from './jamo.response.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('jamos')
 export class JamoController {
   constructor(private readonly jamoService: JamoService) {}
 
+  @UseGuards(JwtAuthGuard)
   @Post()
   @HttpCode(201)
   async create(@Body() data: unknown): Promise<{ id: string }> {
