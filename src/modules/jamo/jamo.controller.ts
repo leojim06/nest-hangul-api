@@ -17,13 +17,17 @@ import {
 } from './jamo.validation.dto';
 import { JamoResponseDto } from './jamo.response.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { UserRole } from '../users/user.schema';
 
 @Controller('jamos')
 export class JamoController {
   constructor(private readonly jamoService: JamoService) {}
 
-  @UseGuards(JwtAuthGuard)
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @HttpCode(201)
   async create(@Body() data: unknown): Promise<{ id: string }> {
     const validateData = createJamoValidation.safeParse(data);
@@ -45,6 +49,8 @@ export class JamoController {
   }
 
   @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.VISITOR)
   @HttpCode(204)
   async update(@Param('id') id: string, @Body() data: unknown): Promise<void> {
     const validatedData = updateJamoValidation.safeParse(data);
@@ -55,6 +61,8 @@ export class JamoController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @HttpCode(204)
   async delete(@Param('id') id: string): Promise<void> {
     await this.jamoService.delete(id);
