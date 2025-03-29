@@ -9,11 +9,13 @@ on:
       - main
 
 jobs:
-  build_and-test:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
       - name: test load pipeline
+        run: echo prueba de ejecucion de pipeline
+
       # - name: Checkout repository
       #   uses: actions/checkout@v4
 

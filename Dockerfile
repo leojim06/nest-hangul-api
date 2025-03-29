@@ -10,7 +10,7 @@ COPY tsconfig*.json ./
 COPY src ./src
 
 # Instala las dependencias
-RUN npm install
+RUN npm ci --omit=dev
 
 # Transpilar Typescript a Javascript
 RUN npm run build
@@ -31,4 +31,4 @@ ENV NODE_ENV=production
 EXPOSE 3000
 
 # Comando para ejecutar la aplicación
-CMD ["npm", "dist/main.js"]
+CMD ["node", "dist/main.js"]
