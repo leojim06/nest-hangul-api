@@ -7,6 +7,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from './modules/auth/auth.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import configuration from './config/configuration';
+// import { AuditModule } from './modules/audith/audit.module';
+// import { SecurityGateway } from './security/security.gateway';
+// import { SecurityModule } from './security/security.module';
 
 @Module({
   imports: [
@@ -21,8 +24,14 @@ import configuration from './config/configuration';
     AuthModule,
     JamoModule,
     UsersModule,
+    // SecurityModule,
+    // AuditModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // SecurityGateway
+  ],
+  // exports: [AuditModule],
 })
 export class AppModule {}

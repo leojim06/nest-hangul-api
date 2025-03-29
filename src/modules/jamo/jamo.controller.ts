@@ -7,6 +7,7 @@ import {
   Param,
   Post,
   Put,
+  Req,
   UseGuards,
   UsePipes,
 } from '@nestjs/common';
@@ -22,17 +23,33 @@ import { UserRole } from '../users/user.schema';
 import { ZodValidationPipe } from 'src/common/validations/zod-validation.pipe';
 import { Jamo } from './jamo.schema';
 import { RolesGuard } from 'src/common/guards/roles.guard';
+import { AuditService } from '../audith/audit.service';
+import { ExtendedRequest } from './jamo.interfaces';
 
 @Controller('jamos')
 export class JamoController {
-  constructor(private readonly jamoService: JamoService) {}
+  constructor(
+    private readonly jamoService: JamoService,
+    // private readonly auditService: AuditService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @HttpCode(201)
   @UsePipes(new ZodValidationPipe(createJamoValidation))
-  async create(@Body() data: Partial<Jamo>): Promise<{ id: string }> {
+  async create(
+    @Body() data: Partial<Jamo>,
+    // @Req() req: ExtendedRequest,
+  ): Promise<{ id: string }> {
+    // console.log('Usuario en create jamo', req.user);
+    // await this.auditService.logAction(
+    //   req.user?.username || 'unknown',
+    //   'CREATE_JAMO',
+    //   req.url,
+    //   req.ip || 'unknown',
+    // );
+
     return this.jamoService.create(data);
   }
 

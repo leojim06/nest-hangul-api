@@ -15,14 +15,20 @@ export class AuthService {
   async validateUser(username: string, pass: string): Promise<any> {
     const user = await this.usersService.findByUsername(username);
 
-    if (user && (await bcrypt.compare(pass, user.password))) {
-      // if (user && pass === user.password) {
-      const { password, ...result } = user;
-      return result;
+    if (!user) {
+      logger.warn(`Login fallido para usuario: ${username}`);
+      throw new UnauthorizedException('Credenciales incorrectas');
     }
 
-    logger.warn(`Intento fallido de inicio de sesión para: ${username}`);
-    throw new UnauthorizedException('Credenciales incorrectas');
+    const isMatch = await bcrypt.compare(pass, user.password);
+    if (!isMatch) {
+      logger.warn(`Contraseña fallida para el usuario: ${username}`);
+      throw new UnauthorizedException('Credenciales incorrectas');
+    }
+
+    logger.info(`Usuario autenticado: ${username}`);
+    const { password, ...result } = user;
+    return result;
   }
 
   login(user: UserType) {
