@@ -2,13 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Audit, AuditDocument } from './audit.schema';
 import { Model } from 'mongoose';
-// import { SecurityGateway } from 'src/security/security.gateway';
+import { SecurityGateway } from '../security/security.gateway';
 
 @Injectable()
 export class AuditService {
   constructor(
     @InjectModel(Audit.name) private auditModel: Model<AuditDocument>,
-    // private securityGateway: SecurityGateway,
+    private securityGateway: SecurityGateway,
   ) {}
 
   async logAction(
@@ -19,10 +19,10 @@ export class AuditService {
   ) {
     await this.auditModel.create({ userId, action, endpoint, ip });
 
-    // if (action === 'FAILED_LOGIN') {
-    //   this.securityGateway.sendSecurityAlert(
-    //     `⚠️ Alerta: Intento fallido de login para el usuario ${userId} desde IP: ${ip}`,
-    //   );
-    // }
+    if (action === 'FAILED_LOGIN') {
+      this.securityGateway.sendSecurityAlert(
+        `⚠️ Alerta: Intento fallido de login para el usuario ${userId} desde IP: ${ip}`,
+      );
+    }
   }
 }

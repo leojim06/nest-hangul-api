@@ -6,10 +6,8 @@ import { UsersModule } from './modules/users/users.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from './modules/auth/auth.module';
 import { MongooseModule } from '@nestjs/mongoose';
+import { SecurityModule } from './modules/security/security.module';
 import configuration from './config/configuration';
-// import { AuditModule } from './modules/audith/audit.module';
-// import { SecurityGateway } from './security/security.gateway';
-// import { SecurityModule } from './security/security.module';
 
 @Module({
   imports: [
@@ -21,17 +19,12 @@ import configuration from './config/configuration';
         uri: configService.get<string>('MONGO_URI'),
       }),
     }),
+    SecurityModule,
     AuthModule,
     JamoModule,
     UsersModule,
-    // SecurityModule,
-    // AuditModule,
   ],
   controllers: [AppController],
-  providers: [
-    AppService,
-    // SecurityGateway
-  ],
-  // exports: [AuditModule],
+  providers: [AppService],
 })
 export class AppModule {}

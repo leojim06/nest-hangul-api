@@ -5,15 +5,33 @@ import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 // import * as mongoSanitize from 'express-mongo-sanitize';
 import * as bodyParser from 'body-parser';
+import { IoAdapter } from '@nestjs/platform-socket.io';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 // import * as csurf from 'csurf';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Configuracion de Swagger
+  const config = new DocumentBuilder()
+    .setTitle('API alfabeto Coreano - Hangul')
+    .setDescription(
+      'Documentación del API para el manejo de caracteres del alfabeto Coreano',
+    )
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
+
+  // midleware para logear todas las peticiones
   app.use((req, res, next) => {
     logger.info(`Request: ${req.method} ${req.url} - IP: ${req.ip}`);
     next();
   });
+
+  app.useWebSocketAdapter(new IoAdapter(app)); // Habilita WebSockets
 
   // activación de CORS
   app.enableCors({
