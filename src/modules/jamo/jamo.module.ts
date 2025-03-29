@@ -4,12 +4,12 @@ import { Jamo, JamoSchema } from './jamo.schema';
 import { JamoRepository } from './jamo.repository';
 import { JamoService } from './jamo.service';
 import { JamoController } from './jamo.controller';
-// import { AuditModule } from '../audith/audit.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Jamo.name, schema: JamoSchema }]),
-    // AuditModule,
+    AuditModule,
   ],
   providers: [JamoRepository, JamoService],
   exports: [JamoRepository, JamoService],

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -9,7 +10,6 @@ import {
   Put,
   Req,
   UseGuards,
-  UsePipes,
 } from '@nestjs/common';
 import { JamoService } from './jamo.service';
 import {
@@ -20,37 +20,33 @@ import { JamoResponseDto } from './jamo.response.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../users/user.schema';
-import { ZodValidationPipe } from 'src/common/validations/zod-validation.pipe';
 import { Jamo } from './jamo.schema';
 import { RolesGuard } from 'src/common/guards/roles.guard';
-import { AuditService } from '../audith/audit.service';
+import { AuditService } from '../audit/audit.service';
 import { ExtendedRequest } from './jamo.interfaces';
 
 @Controller('jamos')
 export class JamoController {
   constructor(
     private readonly jamoService: JamoService,
-    // private readonly auditService: AuditService,
+    private readonly auditService: AuditService,
   ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @HttpCode(201)
-  @UsePipes(new ZodValidationPipe(createJamoValidation))
   async create(
+    @Req() req: ExtendedRequest,
     @Body() data: Partial<Jamo>,
-    // @Req() req: ExtendedRequest,
   ): Promise<{ id: string }> {
-    // console.log('Usuario en create jamo', req.user);
-    // await this.auditService.logAction(
-    //   req.user?.username || 'unknown',
-    //   'CREATE_JAMO',
-    //   req.url,
-    //   req.ip || 'unknown',
-    // );
+    const validateData = createJamoValidation.safeParse(data);
+    if (!validateData.success) {
+      throw new BadRequestException(validateData.error.format());
+    }
 
-    return this.jamoService.create(data);
+    await this.auditRequest('CREATE_JAMO', req.url, req.user?.userId, req.ip);
+    return this.jamoService.create(validateData.data);
   }
 
   @Get()
@@ -67,19 +63,37 @@ export class JamoController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.VISITOR)
   @HttpCode(204)
-  @UsePipes(new ZodValidationPipe(updateJamoValidation))
   async update(
     @Param('id') id: string,
     @Body() data: Partial<Jamo>,
+    @Req() req: ExtendedRequest,
   ): Promise<void> {
-    await this.jamoService.update(id, data);
+    const validatedData = updateJamoValidation.safeParse(data);
+    if (!validatedData.success) {
+      throw new BadRequestException(validatedData.error.format());
+    }
+    await this.auditRequest('UPDATE_JAMO', req.url, req.user?.userId, req.ip);
+    await this.jamoService.update(id, validatedData.data);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @HttpCode(204)
-  async delete(@Param('id') id: string): Promise<void> {
+  async delete(
+    @Req() req: ExtendedRequest,
+    @Param('id') id: string,
+  ): Promise<void> {
+    await this.auditRequest('DELETE_JAMO', req.url, req.user?.userId, req.ip);
     await this.jamoService.delete(id);
+  }
+
+  private async auditRequest(
+    action: string,
+    url: string,
+    userId: string = 'unknown',
+    ip: string = 'unknown',
+  ): Promise<void> {
+    await this.auditService.logAction(userId, action, url, ip);
   }
 }
