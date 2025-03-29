@@ -1,0 +1,27 @@
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:6
+    container_name: hangul-mongodb
+    restart: always
+    ports:
+      - '27017:27017'
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    volumes:
+      - mongodb_data:/data/db
+
+  api:
+    build: .
+    container_name: hangul-api
+    restart: always
+    depends_on:
+      - mongodb
+    ports:
+      - '3000:3000'
+    environment:
+      MONGO_URI: 'mongodb://root:root@mongodb:27017/hangul-db?authSource=admin'
+
+volumes:
+  mongodb_data:
