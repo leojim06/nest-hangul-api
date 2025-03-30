@@ -61,8 +61,8 @@ jobs:
 
       - name: Construir la imagen Docker
         run: |
-          docker build -t ghcr.io/${{ github.leojim06 }}/hangul-api:latest .
+          docker build -t ghcr.io/${{ github.repository }}/hangul-api:latest .
 
       - name: Subir la imagen a GitHub Packages
         run: |
-          docker push ghcr.io/${{ github.leojim06 }}/hangul-api:latest
+          docker push ghcr.io/${{ github.repository }}/hangul-api:latest
