@@ -13,15 +13,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Cambiar al repositorio
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install dependencies
+      - name: Instalar dependencies
         run: npm install
 
       # - name: Run linting
@@ -30,10 +30,10 @@ jobs:
       # - name: Run tests
       #   run: npm test
 
-      - name: Transpile TypeScript
+      - name: Transpilar TypeScript
         run: npm run build
 
-      - name: Upload compiled code
+      - name: Cargar código compilado
         uses: actions/upload-artifact@v4
         with:
           name: dist
@@ -44,19 +44,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Cambiar al repositorio
         uses: actions/checkout@v4
 
-      - name: Download compiled code
+      - name: Descargar código compilado
         uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist
 
-      - name: Log in to GitHub Container Registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+      - name: Verificar usuario de GitHub Actions
+        run: echo "Ejecutando como $GITHUB_ACTOR"
 
-      - name: Build and push Docker image
+      - name: Iniciar sesión en GitHub Container Registry
+        run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+
+      - name: Construir la imagen Docker
         run: |
-          docker build -t ghcr.io/${{ github.repository_owner }}/hangul-api:latest .
-          docker push ghcr.io/${{ github.repository_owner }}/hangul-api:latest
+          docker build -t ghcr.io/${{ github.leojim06 }}/hangul-api:latest .
+
+      - name: Subir la imagen a GitHub Packages
+        run: |
+          docker push ghcr.io/${{ github.leojim06 }}/hangul-api:latest
