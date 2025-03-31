@@ -9,14 +9,17 @@ import {
   Post,
   Put,
   Req,
+  UploadedFile,
+  UploadedFiles,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { JamoService } from './jamo.service';
 import {
   CreateJamoDto,
-  createJamoValidation,
+  CreateJamoValidation,
   UpdateJamoDto,
-  updateJamoValidation,
+  UpdateJamoValidation,
 } from './jamo.validation.dto';
 import { JamoResponseDto } from './jamo.response.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -32,6 +35,9 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { Express } from 'express';
+import { AudioType } from './audio.schema';
 
 @ApiTags('Jamo') // Agrupa en Swagger
 @Controller('jamos')
@@ -67,7 +73,7 @@ export class JamoController {
     @Req() req: ExtendedRequest,
     @Body() createJamoDto: CreateJamoDto,
   ): Promise<{ id: string }> {
-    const validateData = createJamoValidation.safeParse(createJamoDto);
+    const validateData = CreateJamoValidation.safeParse(createJamoDto);
     if (!validateData.success) {
       throw new BadRequestException(validateData.error.format());
     }
@@ -161,12 +167,12 @@ export class JamoController {
     @Body() updateJamoDto: UpdateJamoDto,
     @Req() req: ExtendedRequest,
   ): Promise<void> {
-    const validatedData = updateJamoValidation.safeParse(updateJamoDto);
-    if (!validatedData.success) {
-      throw new BadRequestException(validatedData.error.format());
+    const validateData = UpdateJamoValidation.safeParse(updateJamoDto);
+    if (!validateData.success) {
+      throw new BadRequestException(validateData.error.format());
     }
     await this.auditRequest('UPDATE_JAMO', req.url, req.user?.userId, req.ip);
-    await this.jamoService.update(id, validatedData.data);
+    await this.jamoService.update(id, validateData.data);
   }
 
   @Delete(':id')
@@ -197,6 +203,68 @@ export class JamoController {
     await this.jamoService.delete(id);
   }
 
+  @Get(':id/detail')
+  async getJamoDetail(@Param('id') id: string) {
+    return this.jamoService.getJamoWithMedia(id);
+  }
+
+  @Post(':id/upload-images')
+  @UseInterceptors(FileInterceptor('file'))
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @HttpCode(201)
+  async uploadImages(
+    @Req() req: ExtendedRequest,
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<void> {
+    await this.auditRequest('UPLOAD_IMAGE', req.url, req.user?.userId, req.ip);
+    await this.jamoService.uploadImages(id, file);
+  }
+
+  @Post(':id/upload-audios')
+  @UseInterceptors(FilesInterceptor('files'))
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @HttpCode(201)
+  async uploadAudios(
+    @Req() req: ExtendedRequest,
+    @Param('id') id: string,
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body('audioTypes') audioTypes: AudioType,
+  ): Promise<void> {
+    if (!audioTypes)
+      throw new BadRequestException(
+        'Debe proporcionar los tipos de los audios',
+      );
+
+    let parsedTypes;
+    try {
+      parsedTypes = JSON.parse(audioTypes);
+    } catch (error) {
+      console.log(error);
+      throw new BadRequestException(
+        'El formato de los tipos de audio no es válido',
+      );
+    }
+
+    if (!Array.isArray(parsedTypes) || parsedTypes.length !== files.length) {
+      throw new BadRequestException(
+        'Debes proporcionar un tipo para cada archivo',
+      );
+    }
+
+    await this.auditRequest('UPLOAD_AUDIOS', req.url, req.user?.userId, req.ip);
+    await this.jamoService.uploadAudios(id, files, parsedTypes);
+  }
+
+  /**
+   * Metodo privado para auditar la acción realizada
+   * @param action: Accioón realizada
+   * @param url: Url del endpoint usado para efectuar la accion
+   * @param userId: Usuario que realiza la acción
+   * @param ip: Ip desde la que se realiza la acción
+   */
   private async auditRequest(
     action: string,
     url: string,

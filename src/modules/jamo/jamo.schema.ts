@@ -1,17 +1,25 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
+import { Audio } from './audio.schema';
 
-export type JamoDocument = Jamo & Document;
+export enum JamoType {
+  VOCAL = 'Vocal',
+  VOCAL_DOBLE = 'Vocal Doble',
+  CONSONANTE = 'Consonante',
+  CONSONANTE_DERIVADA = 'Consonante Derivada',
+  CONSONANTE_DOBLE = 'Consonante Doble',
+  GRUPO_CONSONANTICO = 'Grupo Consonántico',
+}
 
 @Schema({ timestamps: true })
 export class Jamo {
   @Prop({
-    default: uuidv4, // Genera un UUID automáticamente
-    unique: true,
-    index: true, // Agrega un índice para mejorar la búsqueda
+    type: String,
+    default: () => uuidv4(),
+    required: true,
   })
-  id: string; // Identificador único del jamo
+  _id: string; // Identificador único del jamo
 
   @Prop({
     required: [true, 'El caracter es obligatorio'],
@@ -20,33 +28,38 @@ export class Jamo {
   })
   character: string; // Letra del alfabeto coreano
 
-  @Prop({ required: true })
-  name: string; // Nombre del carácter
-
-  @Prop({ required: true })
-  pronunciation: string; // Pronunciación en romanización
+  @Prop({
+    required: [true, 'El nombre del caracter es obligatorio'],
+    trim: true,
+  })
+  name: string; // Nombre del carácter en coreano
 
   @Prop({
-    required: true,
-    enum: [
-      'Vocal',
-      'Vocal Doble',
-      'Consonante',
-      'Consonante Derivada',
-      'Consonante Doble',
-      'Grupo Consonantico',
-    ],
+    required: [true, 'El tipo de caracter es obligatorio'],
+    enum: JamoType,
   })
-  category: string; // Tipo (vocal, consonante, etc.)
+  type: JamoType; // Tipo (vocal, consonante, etc.)
 
-  @Prop()
-  romajiName?: string; // Propiedad name en alfabeto latino (opcional)
+  @Prop({ required: false, trim: true })
+  character_romaji: string; // Romanización del character del jamo
 
-  @Prop()
-  img?: string; // Ruta del archivo de imagen (opcional)
+  @Prop({ required: false, trim: true })
+  name_romaji: string; // Romanización del name del jamo
 
-  @Prop()
-  audio?: string; // Ruta del archivo de audio (opcional)
+  @Prop({ required: false, trim: true })
+  pronunciation: string; // Pronunciación
+
+  @Prop({ required: false })
+  imageUrl?: string; // URL de la imagen del jamo
+
+  @Prop({ type: [{ type: String, ref: 'Audio' }], default: [] })
+  audios: Audio[]; // Relación con los audios del jamo
 }
 
+// export type JamoDocument = HydratedDocument<Jamo>;
+export type JamoDocument = Jamo & Document;
 export const JamoSchema = SchemaFactory.createForClass(Jamo);
+
+JamoSchema.set('id', true);
+JamoSchema.set('toJSON', { virtuals: true });
+JamoSchema.set('toObject', { virtuals: true });

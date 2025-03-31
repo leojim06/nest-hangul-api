@@ -1,98 +1,94 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
+import { JamoType } from './jamo.schema';
+
+export enum JamoTypeDto {
+  VOCAL = 'Vocal',
+  VOCAL_DOBLE = 'Vocal Doble',
+  CONSONANTE = 'Consonante',
+  CONSONANTE_DERIVADA = 'Consonante Derivada',
+  CONSONANTE_DOBLE = 'Consonante Doble',
+  GRUPO_CONSONANTICO = 'Grupo Consonántico',
+}
 
 export class CreateJamoDto {
   @ApiProperty({
     example: 'ㅏ',
-    description: 'El carácter en Hangul',
+    description: 'El carácter en Coreano',
     type: String,
     minLength: 1,
-    maxLength: 1,
+    maxLength: 2,
     required: true,
   })
   character: string;
 
   @ApiProperty({
-    example: 'a',
-    description: 'Nombre del Jamo',
+    example: '아',
+    description: 'Nombre del Jamo en Coreano',
     type: String,
     required: true,
   })
   name: string;
 
   @ApiProperty({
-    example: 'a',
-    description: 'Pronunciación del Jamo en alfabeto latino',
-    type: String,
+    example: 'Vocal',
+    description: 'Tipo o categoría del Jamo',
+    enum: JamoTypeDto,
     required: true,
   })
-  pronunciation: string;
+  type: string;
 
   @ApiProperty({
     example: 'a',
     description: 'Nombre del Jamo en alfabeto latino',
     type: String,
-    required: true,
+    required: false,
   })
-  romajiName: string;
+  characterRomaji: string;
 
   @ApiProperty({
-    example: 'Vocal',
-    description: 'Categoría del Jamo',
-    enum: [
-      'Vocal',
-      'Vocal Doble',
-      'Consonante',
-      'Consonante Derivada',
-      'Consonante Doble',
-      'Grupo Consonántico',
-    ],
-  })
-  category: string;
-
-  @ApiProperty({
-    example: 'jamo-image.png',
-    description: 'Archivo de imagen asociado al Jamo',
+    example: 'a',
+    description: 'Nombre del Jamo en alfabeto latino',
     type: String,
     required: false,
   })
-  img: string;
+  nameRomaji: string;
 
   @ApiProperty({
-    example: 'jamo-audio.mp3',
-    description: 'Archivo de audio asociado al Jamo',
+    example: '/ah/',
+    description: 'Pronunciación del Jamo en alfabeto latino',
     type: String,
     required: false,
   })
-  audio: string;
+  pronunciation: string;
 }
 
 export class UpdateJamoDto {
   @ApiProperty({
     example: 'ㅏ',
-    description: 'El carácter en Hangul',
+    description: 'El carácter en Coreano',
     type: String,
     minLength: 1,
-    maxLength: 1,
+    maxLength: 2,
     required: false,
   })
   character: string;
 
   @ApiProperty({
-    example: 'a',
-    description: 'Nombre del Jamo',
+    example: '아',
+    description: 'Nombre del Jamo en Coreano',
     type: String,
     required: false,
   })
   name: string;
 
   @ApiProperty({
-    example: 'a',
-    description: 'Pronunciación del Jamo en alfabeto latino',
-    type: String,
+    example: 'Vocal',
+    description: 'Tipo o categoría del Jamo',
+    enum: JamoTypeDto,
     required: false,
   })
-  pronunciation: string;
+  type: string;
 
   @ApiProperty({
     example: 'a',
@@ -100,67 +96,63 @@ export class UpdateJamoDto {
     type: String,
     required: false,
   })
-  romajiName: string;
+  characterRomaji: string;
 
   @ApiProperty({
-    example: 'Vocal',
-    description: 'Categoría del Jamo',
-    enum: [
-      'Vocal',
-      'Vocal Doble',
-      'Consonante',
-      'Consonante Derivada',
-      'Consonante Doble',
-      'Grupo Consonántico',
-    ],
-  })
-  category: string;
-
-  @ApiProperty({
-    example: 'jamo-image.png',
-    description: 'Archivo de imagen asociado al Jamo',
+    example: 'a',
+    description: 'Nombre del Jamo en alfabeto latino',
     type: String,
     required: false,
   })
-  img: string;
+  nameRomaji: string;
 
   @ApiProperty({
-    example: 'jamo-audio.mp3',
-    description: 'Archivo de audio asociado al Jamo',
+    example: '/ah/',
+    description: 'Pronunciación del Jamo en alfabeto latino',
     type: String,
     required: false,
   })
-  audio: string;
+  pronunciation: string;
 }
 
-export const createJamoValidation = z.object({
-  character: z
-    .string({ required_error: 'El caracter es requerido' })
-    .trim()
-    .min(1, { message: 'El caracter es obligatorio' })
-    .max(2, { message: 'El caracter debe tener entre 1 y 2 caracteres' }),
-  name: z
-    .string({ required_error: 'El nombre es requerido' })
-    .min(1, { message: 'El nombre es obligatorio' }),
-  pronunciation: z
-    .string({ required_error: 'La pronunciacion es requerida' })
-    .min(1, { message: 'La pronunciacion es obligatoria' }),
-  romajiName: z.string().optional(),
-  category: z.enum(
-    [
-      'Vocal',
-      'Vocal Doble',
-      'Consonante',
-      'Consonante Derivada',
-      'Consonante Doble',
-      'Grupo Consonantico',
-    ],
-    {
-      errorMap: () => ({ message: 'Categoría invalida' }),
-    },
-  ),
-  img: z.string().optional(),
-  audio: z.string().optional(),
-});
+const transformTypeEnum = (type?: JamoTypeDto): JamoType | undefined => {
+  if (!type) return undefined;
+  const castedType = type as unknown as JamoType;
+  return Object.values(JamoType).includes(castedType) ? castedType : undefined;
+};
 
-export const updateJamoValidation = createJamoValidation.partial();
+export const CreateJamoValidation = z
+  .object({
+    character: z
+      .string()
+      .min(1, { message: 'El carácter debe tener al menos 1 símbolo' })
+      .max(2, { message: 'El carácter no puede tener más de 2 símbolos' }),
+    name: z
+      .string()
+      .min(1, { message: 'El nombre del Jamo no puede estar vacío' }),
+    type: z.nativeEnum(JamoTypeDto, {
+      errorMap: () => ({ message: 'Tipo de Jamo inválido' }),
+    }),
+    characterRomaji: z.string().optional(),
+    nameRomaji: z.string().optional(),
+    pronunciation: z.string().optional(),
+  })
+  .transform((data) => ({
+    ...data,
+    type: transformTypeEnum(data.type),
+    character_romaji: data.characterRomaji,
+    name_romaji: data.nameRomaji,
+    characterRomaji: undefined,
+    nameRomaji: undefined,
+  }));
+
+export type CreateJamoDtoZod = z.infer<typeof CreateJamoValidation>;
+export const UpdateJamoValidation = CreateJamoValidation._def.schema
+  .partial()
+  .transform((data) => ({
+    ...data,
+    type: transformTypeEnum(data.type),
+    character_romaji: data.characterRomaji,
+    name_romaji: data.nameRomaji,
+  }));
+export type UpdateJamoDtoZod = z.infer<typeof UpdateJamoValidation>;
