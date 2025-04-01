@@ -15,7 +15,7 @@ export class Audio {
     default: () => uuidv4(),
     required: true,
   })
-  _id: string;
+  _id: string; // Identificador único del audio
 
   @Prop({ type: String, ref: 'Jamo', required: true })
   jamoId: string; // Relación con el Jamo al que pertenece el audio

@@ -9,6 +9,8 @@ import { JamoResponseDto, JamoResponseSchema } from './jamo.response.dto';
 import { Audio, AudioType } from './audio.schema';
 import { AudioRepository } from './audio.repository';
 import { FileUploadService } from './fileUpload.service';
+import { v4 as uuidv4 } from 'uuid';
+import { AudioFileType } from './jamo.interfaces';
 
 @Injectable()
 export class JamoService {
@@ -20,12 +22,17 @@ export class JamoService {
 
   async create(data: Partial<Jamo>): Promise<{ id: string }> {
     const newJamo = this.jamoRepository.create(data);
-    return { id: (await newJamo).id };
+    return { id: (await newJamo)._id };
   }
 
   async findAll(): Promise<JamoResponseDto[]> {
     const jamos = await this.jamoRepository.findAll();
-    return jamos.map((jamo) => JamoResponseSchema.parse(jamo));
+    return jamos.map((jamo) => {
+      const dto = JamoResponseSchema.parse(jamo);
+      dto.characterRomaji = jamo.character_romaji;
+      dto.nameRomaji = jamo.name_romaji;
+      return dto;
+    });
   }
 
   async findOne(id: string): Promise<JamoResponseDto> {
@@ -43,22 +50,39 @@ export class JamoService {
 
     // return dto;
 
-    const dto: JamoResponseDto = {
-      id: jamo._id,
-      character: jamo.character,
-      name: jamo.name,
-      type: jamo.type,
-      characterRomaji: jamo.character_romaji,
-      nameRomaji: jamo.name_romaji,
-      pronunciation: jamo.pronunciation,
-      imageUrl: jamo.imageUrl,
-      audios: jamo.audios.map((audio) => ({
-        id: audio._id,
-        character: audio.character,
-        type: audio.type,
-        url: audio.url,
-      })),
-    };
+    // return jamos.map((jamo) => {
+    //   const dto = JamoResponseSchema.parse(jamo);
+    //   dto.characterRomaji = jamo.character_romaji;
+    //   dto.nameRomaji = jamo.name_romaji;
+    //   return dto;
+    // });
+
+    const dto = JamoResponseSchema.parse(jamo);
+    dto.characterRomaji = jamo.character_romaji;
+    dto.nameRomaji = jamo.name_romaji;
+    dto.audios = jamo.audios.map((audio) => ({
+      id: audio._id,
+      character: audio.character,
+      type: audio.type,
+      url: audio.url,
+    }));
+
+    // const dto: JamoResponseDto = {
+    //   id: jamo._id,
+    //   character: jamo.character,
+    //   name: jamo.name,
+    //   type: jamo.type,
+    //   characterRomaji: jamo.character_romaji,
+    //   nameRomaji: jamo.name_romaji,
+    //   pronunciation: jamo.pronunciation,
+    //   imageUrl: jamo.imageUrl,
+    //   audios: jamo.audios.map((audio) => ({
+    //     id: audio._id,
+    //     character: audio.character,
+    //     type: audio.type,
+    //     url: audio.url,
+    //   })),
+    // };
     return dto;
 
     // // Transformamos el esquema de MongoDB al DTO
@@ -111,7 +135,7 @@ export class JamoService {
     if (!jamo) throw new NotFoundException(`Jamo con id ${id} no encontrado`);
 
     // Generar el nombre del archivo y cargarlo usando servicio
-    const filename = `${jamo.character}.png`;
+    const filename = `${jamo.character}${this.fileUploadService.getFileExtension(file.originalname)}`;
     const imageUrl = await this.fileUploadService.saveFile(
       file.buffer,
       filename,
@@ -152,7 +176,7 @@ export class JamoService {
   async uploadAudios(
     id: string,
     files: Express.Multer.File[],
-    audioTypes: { filename: string; type: AudioType }[],
+    audioTypes: AudioFileType[],
   ) {
     const jamo = await this.jamoRepository.findOne(id);
     if (!jamo) throw new NotFoundException(`Jamo con id ${id} no encontrado`);
@@ -165,41 +189,41 @@ export class JamoService {
       // Encontrar el tipo de audio correspondiente al archivo actual
       // Si en la petición no encuentra un tipo para el archivo, lanza error
       const fileTypeInfo = audioTypes.find((t) => t.filename === originalname);
-
       if (!fileTypeInfo)
         throw new BadRequestException(
           `No se encontró tipo de audio para el archivo ${originalname}`,
         );
 
       // extrae el typo del audio desde la petición ya filtrada en el paso anterior
-      // si el tipo específico para este archivo no se encuentra en el enum de tipos de audio, lanza error
-      const { type } = fileTypeInfo;
-      if (!AudioType[type])
-        throw new BadRequestException(
-          `Tipo de audio inválido para ${originalname}.`,
-        );
+      const { type, combinedWith } = fileTypeInfo;
 
       // Generar el nombre del archivo y usar el servicio para guardar el audio en la ruta indicada
       const typeName = AudioType.COMBINADO !== type ? `-${type}` : '';
-      const filename = `${jamo.character}${typeName}.mp3`;
+      const filename = `${jamo.character}${typeName}${this.fileUploadService.getFileExtension(originalname)}`;
       const imageUrl = await this.fileUploadService.saveFile(
         buffer,
         filename,
-        `${jamo.id}/imagenes`,
+        `${jamo.id}/audios`,
       );
 
-      // const typeName = AudioType.COMBINADO !== type ? `-${type}` : '';
-      // const uploadPath = `uploads/${id}/audios/${jamo.character}${typeName}.mp3`;
-      // fs.writeFileSync(uploadPath, buffer);
-
-      const audio = await this.audioRepository.save({
-        jamoId: jamo.id,
+      const dataAudio: Partial<Audio> = {
+        jamoId: jamo._id,
         character: jamo.character,
         type,
         url: `https://example.com/${imageUrl}`,
-      });
+      };
 
-      uploadedFiles.push(audio);
+      if (combinedWith) {
+        const jamo = await this.jamoRepository.findOne(combinedWith);
+        if (!jamo)
+          throw new BadRequestException(
+            `Jamo con id ${combinedWith} relacionado al audio ${originalname} no encontrado`,
+          );
+        dataAudio.combinedWith = jamo._id;
+      }
+
+      const newAudio = await this.audioRepository.create(dataAudio);
+      uploadedFiles.push(newAudio);
     }
 
     return { message: 'Audios subidos exitosamente', files: uploadedFiles };

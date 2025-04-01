@@ -27,7 +27,11 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../users/user.schema';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { AuditService } from '../audit/audit.service';
-import { ExtendedRequest } from './jamo.interfaces';
+import {
+  AudioFileType,
+  AudioFileTypeRequest,
+  ExtendedRequest,
+} from './jamo.interfaces';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -231,14 +235,14 @@ export class JamoController {
     @Req() req: ExtendedRequest,
     @Param('id') id: string,
     @UploadedFiles() files: Express.Multer.File[],
-    @Body('audioTypes') audioTypes: AudioType,
+    @Body('audioTypes') audioTypes: string,
   ): Promise<void> {
     if (!audioTypes)
       throw new BadRequestException(
         'Debe proporcionar los tipos de los audios',
       );
 
-    let parsedTypes;
+    let parsedTypes: AudioFileTypeRequest[];
     try {
       parsedTypes = JSON.parse(audioTypes);
     } catch (error) {
@@ -250,12 +254,38 @@ export class JamoController {
 
     if (!Array.isArray(parsedTypes) || parsedTypes.length !== files.length) {
       throw new BadRequestException(
-        'Debes proporcionar un tipo para cada archivo',
+        'El número de archivos debe coincidir con el número de tipos de audio.',
       );
     }
 
+    const validatedTypes: AudioFileType[] = parsedTypes.map((audioType) => {
+      const validType = Object.values(AudioType).includes(
+        audioType.type as AudioType,
+      )
+        ? (audioType.type as AudioType)
+        : null;
+
+      if (!validType)
+        throw new BadRequestException(
+          `Tipo de audio inválido: ${audioType.type}`,
+        );
+
+      if (validType === AudioType.COMBINADO && !audioType.combinedWith)
+        throw new BadRequestException(
+          `El audio ${audioType.filename} requiere un un caracter con el cual combinarse`,
+        );
+
+      const audioInfo: AudioFileType = {
+        filename: audioType.filename,
+        type: validType,
+        combinedWith: audioType.combinedWith,
+      };
+
+      return audioInfo;
+    });
+
     await this.auditRequest('UPLOAD_AUDIOS', req.url, req.user?.userId, req.ip);
-    await this.jamoService.uploadAudios(id, files, parsedTypes);
+    await this.jamoService.uploadAudios(id, files, validatedTypes);
   }
 
   /**

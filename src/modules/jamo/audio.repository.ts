@@ -13,7 +13,8 @@ export class AudioRepository {
     return this.audioModel.find({ jamoId }).lean();
   }
 
-  async save(audio: Partial<Audio>): Promise<AudioDocument> {
-    return new this.audioModel(audio).save();
+  async create(audio: Partial<Audio>): Promise<AudioDocument> {
+    console.log('Audio> ', audio);
+    return this.audioModel.create(audio);
   }
 }
